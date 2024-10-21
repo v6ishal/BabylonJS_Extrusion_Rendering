@@ -1,26 +1,74 @@
 <!Doctype html>
 <html>
-  
   <head>
-  
     <meta charset="UTF-8">
-    <title> 2D - Extrusion & Manipulation </title>
+    <title>Babylon 2D Shape Extrusion & Manipulation</title>
     <script src="https://cdn.babylonjs.com/babylon.max.js"></script>
     <script src="https://cdn.babylonjs.com/materialsLibrary/babylon.gridMaterial.js"></script>
     <script src="https://unpkg.com/earcut@2.1.1/dist/earcut.min.js"></script>
     <link rel="stylesheet" href="style.css">
     
+    <style>
+      body, html {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        background-color: #f4f4f4;
+      }
+
+      canvas {
+        flex: 1; /* Take up all available space */
+        width: 100%; /* Full width */
+        height: 100%; /* Full height */
+        display: block;
+      }
+
+      #button-container {
+        display: flex;
+        justify-content: center;
+        margin: 20px 0; /* Space around buttons */
+      }
+
+      button {
+        padding: 10px 20px;
+        margin: 0 10px;
+        font-size: 16px;
+        cursor: pointer;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+      }
+
+      button:hover {
+        background-color: #0056b3;
+      }
+    </style>
   </head>
 
   <body>
 
-    <button onclick="enterDrawMode()" id="drawMode">Draw</button>
-    <button onclick="extrudeShape()">Extrude</button>
-    <button onclick="enterMoveMode()">Move</button>
-    <button onclick="enterVertexEditMode()">Vertex Edit</button>
+    <div id="button-container">
+      <button onclick="enterDrawMode()" id="drawMode">Draw</button>
+      <button onclick="handleExtrudeClick()">Extrude</button>
+      <button onclick="enterMoveMode()">Move</button>
+      <button onclick="enterVertexEditMode()">Edit Vertex</button>
+    </div>
+
     <canvas id="myCanvas"></canvas>
     <script src="main.js"></script>
 
-  </body>
+    <script>
+      // Prompt for extrusion depth
+      function handleExtrudeClick() {
+        let extrusionDepth = prompt("Enter the extrusion depth (in units):", "5");
+        if (extrusionDepth !== null) {
+          extrudeShape(Number(extrusionDepth));
+        }
+      }
+    </script>
 
+  </body>
 </html>

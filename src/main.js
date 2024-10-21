@@ -3,12 +3,13 @@ var canvas = document.getElementById('myCanvas');
 var engine = new BABYLON.Engine(canvas, true);
 var scene = new BABYLON.Scene(engine);
 
-const camera = new BABYLON.ArcRotateCamera("Camera",  0, Math.PI / 3, 50, BABYLON.Vector3.Zero(), scene);
+const camera = new BABYLON.ArcRotateCamera("Camera",  0, Math.PI / 3, 150, BABYLON.Vector3.Zero(), scene);
 camera.attachControl(canvas, true);
 
 var drawMode = false;
 var moveMode = false;
 var vertexEditMode = false;
+var def_depth = 5;
 
 var points = [];
 var shapesToExtrude = [];
@@ -20,7 +21,7 @@ scene.clearColor = new BABYLON.Color3(0.85, 0.95, 1); // Color of background
 const light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);
 
 // Create a ground
-const ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 40, height: 40 }, scene);
+const ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 100, height: 100 }, scene);
 
 // Create a brown material for the ground
 const groundMaterial = new BABYLON.StandardMaterial("groundMaterial", scene);
@@ -56,7 +57,7 @@ function createGrid(scene, size, divisions) {
 }
 
 // Add a grid with 1 unit division
-createGrid(scene, 40, 1);
+//createGrid(scene, 100, 1);
 
 // Render the scene
 engine.runRenderLoop(function () {
@@ -165,22 +166,23 @@ function computeConvexHull(points) {
 // Step 3: 2D-Shape Extrusion
 var shapesExtruded = [];  // boolean array to avoid multiple extrusion objects
 
-function extrudeShapeMode() {
+function extrudeShapeMode(depth = 5) {
 
     moveMode = true;
     drawMode = false;
     vertexEditMode = false;
     extrudeMode = false;
 
-    extrudeShape();
+    extrudeShape(depth);
 
 }
 
-function extrudeShape() {
+function extrudeShape(depth) {
     drawMode = false;
     moveMode = false;
     vertexEditMode = false;
     extrudeMode = true;
+    def_depth = depth;
 
     for (let i = 0; i < shapesToExtrude.length; i++) {
         if (i == shapesExtruded.length) {
@@ -195,12 +197,12 @@ function extrudeShape() {
             var extrudedShapeUniqueId = "shapeExtruded" + i.toString();
             const extrusion = BABYLON.MeshBuilder.ExtrudePolygon(extrudedShapeUniqueId, {
                 shape: hullPoints,
-                depth: 6,  // Set extrusion depth to 6 units
+                depth: depth,  // Set extrusion depth to 6 units
                 sideOrientation: BABYLON.Mesh.DOUBLESIDE
             }, scene);
 
             // Adjust the position of the extruded shape
-            extrusion.position.y = 6;  // Shift upwards by half the extrusion depth
+            extrusion.position.y = depth;  // Shift upwards by half the extrusion depth
 
             // Extruded shape UI Enhancements
             var material = new BABYLON.StandardMaterial("extrudedMaterial", scene);
@@ -382,7 +384,7 @@ function runVertexEditMode(){
         // preparing parameters for ray from cursor perpendicular to ground in -ve y axis direction
         var origin = rayCastHit.pickedPoint;
         var direction = new BABYLON.Vector3(0, -1, 0);
-        var length = 6;
+        var length = 5;
 
         var rayPerpedicular = new BABYLON.Ray(origin, direction, length);
         
@@ -508,17 +510,19 @@ function runVertexEditMode(){
         var extrudedMeshId = "shapeExtruded" + curMeshIdxs[0].slice(11);
         var extrudedMesh = scene.getMeshByID(extrudedMeshId);
         extrudedMesh.dispose();
-        extrudedMesh = BABYLON.MeshBuilder.ExtrudePolygon(extrudedMeshId, {shape: myPoints, depth: 6, updatable: true}, scene);
-        extrudedMesh.position.y = 6;
+        extrudedMesh = BABYLON.MeshBuilder.ExtrudePolygon(extrudedMeshId, {shape: myPoints, depth: def_depth, updatable: true}, scene);
+        extrudedMesh.position.y = def_depth;
         
         var material = new BABYLON.StandardMaterial("extrudedMaterial", scene);
-        material.diffuseColor = new BABYLON.Color3(0, 0, 1);
+        material.diffuseColor = new BABYLON.Color3(0, 0, 1 );
         extrudedMesh.material = material;
         extrudedMesh.enableEdgesRendering();
         extrudedMesh.edgesWidth = 4.0; // Set the width of the edges
         extrudedMesh.edgesColor = new BABYLON.Color4(0, 0, 0, 1);
 
         startingPoint = current;
+
+
     }
 
     canvas.addEventListener("pointerdown", onPointerDown, false);
