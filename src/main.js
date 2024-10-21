@@ -13,7 +13,6 @@ var vertexEditMode = false;
 var points = [];
 var shapesToExtrude = [];
 
-
 // Step 0: Set the background color to white
 scene.clearColor = new BABYLON.Color3(0.85, 0.95, 1); // Color of background
 
@@ -32,6 +31,42 @@ ground.material = groundMaterial;
 ground.enableEdgesRendering();
 ground.edgesWidth = 4.0;
 ground.edgesColor = new BABYLON.Color4(0, 0, 0, 1);  // Black edges
+
+// Create a grid to represent a 1-unit scale
+function createGrid(scene, size, divisions) {
+    const gridColor = new BABYLON.Color3(0, 0, 0); // Black color for grid lines
+    const lines = [];
+
+    // Lines parallel to Z axis (constant X)
+    for (let i = -size / 2; i <= size / 2; i += divisions) {
+        lines.push([new BABYLON.Vector3(i, 0, -size / 2), new BABYLON.Vector3(i, 0, size / 2)]);
+    }
+
+    // Lines parallel to X axis (constant Z)
+    for (let i = -size / 2; i <= size / 2; i += divisions) {
+        lines.push([new BABYLON.Vector3(-size / 2, 0, i), new BABYLON.Vector3(size / 2, 0, i)]);
+    }
+
+    const gridLines = BABYLON.MeshBuilder.CreateLineSystem("grid", {
+        lines: lines,
+        updatable: false,
+    }, scene);
+
+    gridLines.color = gridColor;
+}
+
+// Add a grid with 1 unit division
+createGrid(scene, 40, 1);
+
+// Render the scene
+engine.runRenderLoop(function () {
+    scene.render();
+});
+
+// Resize the engine when the window is resized
+window.addEventListener("resize", function () {
+    engine.resize();
+});
 
 
 // Step 2: Draw a 2D shape
@@ -130,6 +165,17 @@ function computeConvexHull(points) {
 // Step 3: 2D-Shape Extrusion
 var shapesExtruded = [];  // boolean array to avoid multiple extrusion objects
 
+function extrudeShapeMode() {
+
+    moveMode = true;
+    drawMode = false;
+    vertexEditMode = false;
+    extrudeMode = false;
+
+    extrudeShape();
+
+}
+
 function extrudeShape() {
     drawMode = false;
     moveMode = false;
@@ -185,120 +231,129 @@ function enterMoveMode() {
 }
 
 function runMoveMode() {
+    // Get the canvas on which Babylon.js is rendering the scene
     var canvas = engine.getRenderingCanvas();
-    var startingPoint;
-    var currentMesh = null;
+    var startingPoint; // Stores the initial point where the user clicks on the ground
+    var currentMesh = null; // Stores the reference to the mesh that is currently being dragged
 
+    // Function to determine the ground position where the pointer is located
     var getGroundPosition = function () {
+        // Perform a raycasting operation to get the intersection point on the ground mesh
         var pickinfo = scene.pick(scene.pointerX, scene.pointerY, function (mesh) { return mesh == ground; });
         if (pickinfo.hit) {
-            return pickinfo.pickedPoint;
+            return pickinfo.pickedPoint; // Return the position on the ground where the ray hit
         }
-        return null;
+        return null; // Return null if no hit was detected
     }
 
+    // Event handler for when the pointer (mouse button) is pressed down
     var onPointerDownDrag = function (evt) {
+        // Disable event listeners if the move mode is turned off
         if(moveMode === false){
             canvas.removeEventListener("pointerdown", onPointerDownDrag);
             canvas.removeEventListener("pointerup", onPointerUpDrag);
             canvas.removeEventListener("pointermove", onPointerMoveDrag);
         }
+        // Only handle left mouse button (button 0)
         if (evt.button !== 0) {
             return;
         }
 
-        // check if we are under a mesh
+        // Check if a mesh (other than the ground) is under the pointer
         var pickInfo = scene.pick(scene.pointerX, scene.pointerY, function (mesh) { return mesh !== ground && mesh.id.startsWith("shapeExtruded"); });
         if (pickInfo.hit) {
-            currentMesh = pickInfo.pickedMesh;
-            startingPoint = getGroundPosition(evt);
+            currentMesh = pickInfo.pickedMesh; // Store the selected mesh
+            startingPoint = getGroundPosition(evt); // Store the starting point for movement
 
             if (startingPoint) { 
-                // we need to disconnect the camera from the canvas
+                // Temporarily detach the camera controls to allow mesh movement without camera interference
                 setTimeout(function () {
                     camera.detachControl(canvas);
                 }, 0);
 
-                // Apply a highlight material once when dragging starts
+                // Apply a blue material to indicate the mesh is selected for dragging
                 var material = new BABYLON.StandardMaterial("extrudedMaterial", scene);
-                material.diffuseColor = new BABYLON.Color3(0, 0, 1);
-                currentMesh.material = material;
+                material.diffuseColor = new BABYLON.Color3(0, 0, 1); // Set color to blue
+                currentMesh.material = material; // Apply the material to the selected mesh
             }
         }
     }
 
+    // Event handler for when the pointer (mouse button) is released
     var onPointerUpDrag = function () {
         if (startingPoint) {
-            // Reapply the material or leave it as it is when the movement stops
-            // Optionally, you could reset the color or apply a final color here if needed
+            // Reattach the camera controls when dragging is finished
             camera.attachControl(canvas, true);
-            startingPoint = null;
+            startingPoint = null; // Reset the starting point
             return;
         }
     }
 
+    // Event handler for when the pointer is moved (dragging)
     var onPointerMoveDrag = function (evt) {
         if (!startingPoint) {
-            return;
+            return; // Exit if no starting point is set (i.e., if we're not dragging)
         }
 
+        // Get the new ground position while dragging
         var current = getGroundPosition();
 
         if (!current) {
-            return;
+            return; // Exit if no valid position is found
         }
 
+        // Calculate the difference between the starting point and the current point
         var diff = current.subtract(startingPoint);
 
-        // 3D shape update
+        // Move the selected mesh by the difference in position
         currentMesh.position.addInPlace(diff);
 
-        // 2D mesh update
-        var lineMeshId = "lines" + currentMesh.id.slice(13);
+        // Move the corresponding line mesh (2D shape) by the same amount
+        var lineMeshId = "lines" + currentMesh.id.slice(13); // Generate line mesh ID
         var lineMesh = scene.getMeshByID(lineMeshId);
         lineMesh.position.addInPlace(diff);
 
-        // vertices mesh update
+        // Get the index of the selected mesh and update the points of the associated 2D shape
         var idx = Number(currentMesh.id.slice(13));    
         var curPointSet = shapesToExtrude[idx];
 
+        // Update positions for the vertices (point markers)
         var updatedPath = [];
         for (var i = 0; i < curPointSet.length; i++) {
-            var sphereName = "pointMarker" + idx.toString() + "_" + i.toString();
+            var sphereName = "pointMarker" + idx.toString() + "_" + i.toString(); // Get sphere name
             var curSphere = scene.getMeshByName(sphereName);
             if (curSphere != null) {
-                curSphere.position.addInPlace(diff);
-                curPointSet[i] = curSphere.position;
-                updatedPath.push(curSphere.position.x);
-                updatedPath.push(curSphere.position.y);
-                updatedPath.push(curSphere.position.z);
+                curSphere.position.addInPlace(diff); // Update sphere position
+                curPointSet[i] = curSphere.position; // Update 2D shape point
+                updatedPath.push(curSphere.position.x, curSphere.position.y, curSphere.position.z); // Track new position
             } else {
-                console.log("sphere not found: ", sphereName);
+                console.log("sphere not found: ", sphereName); // Log error if marker not found
                 break;
             }
         }
 
-        // Update the line and vertices after movement
+        // Ensure the shape is closed by updating the last point to match the first
         var n = curPointSet.length;
         curPointSet[n-1] = curPointSet[0];
 
-        updatedPath.push(updatedPath[0]);
-        updatedPath.push(updatedPath[1]);
-        updatedPath.push(updatedPath[2]);
+        updatedPath.push(updatedPath[0], updatedPath[1], updatedPath[2]); // Add the first point to close the path
 
-        // Recreate new line mesh (2D shape) & dispose of the earlier one
+        // Dispose of the old line mesh and create a new one to reflect the updated positions
         var lineMesh = scene.getMeshByID(lineMeshId);
         lineMesh.dispose();
-        lineMesh = BABYLON.MeshBuilder.CreateLines(lineMeshId, {points: curPointSet}, scene);
-        lineMesh.color = new BABYLON.Color3(0, 0, 1);
+        lineMesh = BABYLON.MeshBuilder.CreateLines(lineMeshId, { points: curPointSet }, scene);
+        lineMesh.color = new BABYLON.Color3(0, 0, 1); // Set line color to blue
 
+        // Set the new starting point for the next move iteration
         startingPoint = current;
     }
 
+    // Attach event listeners to handle pointer down, up, and move events
     canvas.addEventListener("pointerdown", onPointerDownDrag, false);
     canvas.addEventListener("pointerup", onPointerUpDrag, false);
     canvas.addEventListener("pointermove", onPointerMoveDrag, false);
 }
+
 
 
 // Step 5: Edit the vertex Position
@@ -464,8 +519,6 @@ function runVertexEditMode(){
         extrudedMesh.edgesColor = new BABYLON.Color4(0, 0, 0, 1);
 
         startingPoint = current;
-
-
     }
 
     canvas.addEventListener("pointerdown", onPointerDown, false);
