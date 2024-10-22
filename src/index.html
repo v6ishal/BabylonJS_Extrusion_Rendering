@@ -1,8 +1,8 @@
-<!Doctype html>
+<!DOCTYPE html>
 <html>
   <head>
     <meta charset="UTF-8">
-    <title>Babylon 2D Shape Extrusion & Manipulation</title>
+    <title>v6ishal Babylon 2D Shape Extrusion & Manipulation</title>
     <script src="https://cdn.babylonjs.com/babylon.max.js"></script>
     <script src="https://cdn.babylonjs.com/materialsLibrary/babylon.gridMaterial.js"></script>
     <script src="https://unpkg.com/earcut@2.1.1/dist/earcut.min.js"></script>
@@ -45,20 +45,46 @@
       button:hover {
         background-color: #0056b3;
       }
+
+      /* Style for disabled buttons */
+      button:disabled {
+        background-color: #cccccc; /* Light grey background */
+        color: #666666; /* Dark grey text */
+        cursor: not-allowed; /* Change cursor to indicate it's disabled */
+      }
+
+      /* Developed by Vishal section */
+      #developer-note {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        font-size: 12px;
+        color: #333;
+        background-color: rgba(255, 255, 255, 0.8);
+        padding: 5px;
+        border-radius: 5px;
+        z-index: 9999; /* Ensures this div is on top of everything */
+      }
+
     </style>
   </head>
 
   <body>
 
     <div id="button-container">
-      <button onclick="enterDrawMode()" id="drawMode">Draw</button>
-      <button onclick="handleExtrudeClick()">Extrude</button>
-      <button onclick="enterMoveMode()">Move</button>
-      <button onclick="enterVertexEditMode()">Edit Vertex</button>
-    </div>
+      <button onclick="toggleMode(this, 'drawMode')" id="drawMode">Draw</button>
+      <button onclick="toggleMode(this, 'extrudeMode')">Extrude</button>
+      <button onclick="toggleMode(this, 'moveMode')">Move</button>
+      <button onclick="toggleMode(this, 'vertexEditMode')">Edit Vertex</button>
+    </div>     
 
+    <div id="instructions-container"></div>
     <canvas id="myCanvas"></canvas>
-    <script src="main.js"></script>
+    
+    <!-- Developer note -->
+    <div id="developer-note">Developed by Vishal</div>
+
+    <script type="module" src="main.js"></script>
 
     <script>
       // Prompt for extrusion depth
@@ -71,4 +97,5 @@
     </script>
 
   </body>
+  
 </html>
