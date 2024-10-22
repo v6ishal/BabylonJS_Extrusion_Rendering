@@ -23,7 +23,7 @@ let PolygonsToExtrude = [];
 let isPolygonAlreadyExtruded = [];  // boolean array to avoid multiple extrusion objects
 
 // Create a ground
-const ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 20, height: 30 }, sceneInstance);
+const ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 20, height: 50 }, sceneInstance);
 
 setupCanvas(sceneInstance, babylonEngine, ground);
 
